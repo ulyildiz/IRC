@@ -22,7 +22,7 @@ SimpleTcpServer::SimpleTcpServer()
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = 0;
 	if (sigaction(SIGINT, &sa, NULL) < 0) {
-		std::cerr << "sigaction() failed." << std::endl;
+		throw std::runtime_error("sigaction() failed: " + std::string(std::strerror(errno)));
 	}
 }
 
@@ -30,7 +30,7 @@ SimpleTcpServer::~SimpleTcpServer() {
 	close(fds[0].fd);
 }
 
-int SimpleTcpServer::start(const char *ip, const char* port, void *IRC, DataHandler handler) {
+void SimpleTcpServer::start(const char *ip, const char* port, void *IRC, DataHandler handler) {
     struct addrinfo hints;
     struct addrinfo* res = NULL;
     int serverSocket;
@@ -39,9 +39,8 @@ int SimpleTcpServer::start(const char *ip, const char* port, void *IRC, DataHand
 	dataHandler = handler;
 
 	struct protoent* proto = getprotobyname("tcp");
-    if (!proto) {
-        throw ();
-    }
+    if (!proto)
+        throw std::runtime_error("getprotobyname() failed: " + std::string(std::strerror(errno)));
 
     std::memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;         // IPv4
@@ -57,44 +56,34 @@ int SimpleTcpServer::start(const char *ip, const char* port, void *IRC, DataHand
 		}
 	}
 
-    if (getaddrinfo(ip, port, &hints, &res)) {
-        std::cerr << "getaddrinfo: " << std::strerror(errno) << std::endl;
-        return -1;
-    }
+    if (getaddrinfo(ip, port, &hints, &res))
+        throw std::runtime_error("getaddrinfo() failed: " + std::string(std::strerror(errno)));
 
     serverSocket = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
     if (serverSocket < 0) {
-        std::cerr << "socket() failed." << std::endl;
         freeaddrinfo(res);
-        return -1;
+        throw std::runtime_error("socket() failed: " + std::string(std::strerror(errno)));
     }
 
     int opt = 1;
     if (setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, (const void*)&opt, sizeof(opt)) < 0) {
-        std::cerr << "setsockopt() failed." << std::endl;
-        freeaddrinfo(res);
+		freeaddrinfo(res);
         close(serverSocket);
-        return -1;
+		throw std::runtime_error("setsockopt() failed: " + std::string(std::strerror(errno)));
     }
 
     if (bind(serverSocket, res->ai_addr, res->ai_addrlen) < 0) {
-        std::cerr << "bind() failed." << std::endl;
-        freeaddrinfo(res);
+		freeaddrinfo(res);
         close(serverSocket);
-        return -1;
+        throw std::runtime_error("bind() failed: " + std::string(std::strerror(errno)));
     }
     freeaddrinfo(res);
 
-    if (setNonBlocking(serverSocket) < 0) {
-        std::cerr << "Failed to set non-blocking mode on serverSocket." << std::endl;
-        close(serverSocket);
-        return -1;
-    }
+	setNonBlocking(serverSocket);
 
     if (listen(serverSocket, 10) < 0) {
-        std::cerr << "listen() failed." << std::endl;
-        close(serverSocket);
-        return -1;
+		close(serverSocket);
+        throw std::runtime_error("listen() failed: " + std::string(std::strerror(errno)));
     }
 
 	fds[0].fd = serverSocket;
@@ -105,8 +94,6 @@ int SimpleTcpServer::start(const char *ip, const char* port, void *IRC, DataHand
 		fds[i].revents = 0;
 	}
     printBoundAddress();
-
-    return 0;
 }
 
 void SimpleTcpServer::createClientSocket()
@@ -117,7 +104,8 @@ void SimpleTcpServer::createClientSocket()
 	int clientSocket = accept(fds[0].fd, (struct sockaddr*)&clientAddr, &clientLen);
     if (clientSocket >= 0) {
         setNonBlocking(clientSocket);
-        if (nfds < MAX_CLIENTS)
+    
+		if (nfds < MAX_CLIENTS)
         {
             fds[nfds].fd = clientSocket;
             fds[nfds].events = POLLIN;
@@ -138,8 +126,7 @@ void SimpleTcpServer::run() {
 		if (poll(fds, nfds, -1) < 0) {
 			if (errno == EINTR)
 				continue;
-            std::cerr << "poll() error." << std::endl;
-            break;
+            throw std::runtime_error("poll() failed: " + std::string(std::strerror(errno)));
         }
 		
         if (fds[0].revents & POLLIN)
@@ -161,7 +148,8 @@ void SimpleTcpServer::run() {
                 }
             }
         }
-        for (nfds_t i = 1; i < nfds; i++) {
+    
+		for (nfds_t i = 1; i < nfds; i++) {
             if (fds[i].fd == -1) {
                 for (nfds_t j = i; j < nfds - 1; j++) {
                     fds[j] = fds[j + 1];
@@ -177,21 +165,26 @@ void SimpleTcpServer::run() {
 
 void SimpleTcpServer::signalHandler(int signum) {
     (void)signum;
-    std::cout << "\nSIGINT received, shutting down server." << std::endl;
-	exit(1);
+    throw std::runtime_error("Server interrupted by signal.");
 }
 
 int SimpleTcpServer::setNonBlocking(int fd) {
     int flags = fcntl(fd, F_GETFL, 0);
-    if (flags == -1)
-        return -1;
-    return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+    
+	if (flags == -1)
+	{
+		close(fd);
+        throw std::runtime_error("fcntl() failed: " + std::string(std::strerror(errno)));
+	}
+	
+	return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
 
 void SimpleTcpServer::printBoundAddress() {
     struct sockaddr_in addr;
     socklen_t addrlen = sizeof(addr);
-    if (getsockname(fds[0].fd, (struct sockaddr*)&addr, &addrlen) == 0) {
+    
+	if (getsockname(fds[0].fd, (struct sockaddr*)&addr, &addrlen) == 0) {
         std::cout << "Server bound to: " << inet_ntoa(addr.sin_addr)
                   << ":" << ntohs(addr.sin_port) << std::endl;
     } else {
@@ -205,7 +198,8 @@ int SimpleTcpServer::send(int clientSocket, const char* data) {
 
 int SimpleTcpServer::send(int clientSocket, const char* data, size_t dataSize) {
     ssize_t sentBytes = ::send(clientSocket, data, dataSize, 0);
-    if (sentBytes < 0) {
+    
+	if (sentBytes < 0) {
         std::cerr << "send() failed: " << std::strerror(errno) << std::endl;
     }
     return sentBytes;

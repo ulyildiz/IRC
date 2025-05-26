@@ -150,8 +150,6 @@ void IRC_Protocol::lifeloop(int clientSocket, const char* data, int length, void
     // Not: buf’da kalan kısım henüz tamamlanmamış bir komut, birikiyor.
 }
 
-int start(const char *ip, const char* port, void *IRC, DataHandler handler);
-
 
 // handler: clientSocket'ten kullanıcıyı bulup, komut işleyici fonksiyonunu çağırır.
 void IRC_Protocol::handler(const IRCMessage& msg, int clientSocket) {

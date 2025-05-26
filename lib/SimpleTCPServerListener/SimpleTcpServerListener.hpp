@@ -16,13 +16,13 @@ class SimpleTcpServer {
 		int setNonBlocking(int fd);
 		
 	protected:
-		struct pollfd fds[MAX_CLIENTS]; // Poll için file descriptor array
+		struct pollfd fds[MAX_CLIENTS + 1]; // Poll için file descriptor array
 		nfds_t	nfds; // Aktif file descriptor sayısı
 		
 		DataHandler dataHandler;
 		void* handlerUserData;
 		
-		int start(const char *ip, const char* port, void *IRC, DataHandler handler);
+		void start(const char *ip, const char* port, void *IRC, DataHandler handler);
 		
 		int send(int clientSocket, const char* data);
 		int send(int clientSocket, const char* data, size_t dataSize);
