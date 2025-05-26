@@ -1,7 +1,7 @@
-#ifndef IRC_PROTOCOL_H
-#define IRC_PROTOCOL_H
+#ifndef IRC_PROTOCOL_HPP
+#define IRC_PROTOCOL_HPP
 
-#include "../lib/SimpleTCPServerListener/SimpleTcpServerListener.h"
+#include "../lib/SimpleTCPServerListener/SimpleTcpServerListener.hpp"
 #include <string>
 #include <vector>
 #include <map>
@@ -29,6 +29,8 @@ struct IRCUser {
     int registrationState;
     // (isteğe bağlı) server-wide operatörlük flag’i
     bool globalOperator;
+    IRCUser(int ClientSocket);
+    ~IRCUser();
 };
 
 // Kayıt durumu sabitleri
@@ -49,13 +51,13 @@ struct IRCChannel {
     std::vector<IRCUser*> users;
     std::vector<IRCUser*> operators;     // +o ile atanmış operatörler
     std::vector<IRCUser*> invitedUsers;  // +i modunda davet edilenler
+    IRCChannel(std::string chName, IRCUser* user);
 };
 
-class IRC_Protocol {
+class IRC_Protocol : public SimpleTcpServer {
 private:
     std::string serverName;
     int _port;
-    SimpleTcpServer Listener;
     const std::string &_password;
     std::map<int, IRCUser*> connectedUsers;
     std::map<std::string, IRCChannel*> channels;
@@ -67,8 +69,7 @@ private:
     static void lifeloop(int clientSocket, const char *data, int length, void *userData);
 
     // Checker
-    void addUserIfNotExists(int clientSocket);
-    void updateUserIfIncomplete(int clientSocket,
+        void updateUserIfIncomplete(int clientSocket,
         const std::string &nickname,
         const std::string &username,
         const std::string &realname);
@@ -98,7 +99,6 @@ private:
 public:
     IRC_Protocol(int port, const std::string &password);
     ~IRC_Protocol();
-    int start();
 };
 
 #endif // IRC_PROTOCOL_H

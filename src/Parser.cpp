@@ -1,4 +1,4 @@
-#include "../include/IRC_Protocol.h"
+#include "../include/IRC_Protocol.hpp"
 #include <algorithm>
 #include <iostream>
 #include <sstream>

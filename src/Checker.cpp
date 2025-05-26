@@ -1,16 +1,4 @@
-#include "../include/IRC_Protocol.h"
-
-void IRC_Protocol::addUserIfNotExists(int clientSocket) {
-    if (connectedUsers.find(clientSocket) == connectedUsers.end()) {
-        IRCUser* newUser = new IRCUser();
-        newUser->clientSocket = clientSocket;
-        newUser->nickname = "";
-        newUser->username = "";
-        newUser->realname = "";
-        newUser->registrationState = REG_STATE_INIT;
-        connectedUsers[clientSocket] = newUser;
-    }
-}
+#include "../include/IRC_Protocol.hpp"
 
 void IRC_Protocol::updateUserIfIncomplete(int clientSocket, const std::string& nickname,
                                            const std::string& username, const std::string& realname) {
@@ -38,7 +26,7 @@ void IRC_Protocol::updateUserIfIncomplete(int clientSocket, const std::string& n
         if (user->nickname != "" && user->username != "" && user->realname != "") {
             if (updated) {
                 std::string welcomeMessage = ":" + serverName + " :Welcome to the IRC server!";
-                Listener.send(clientSocket, welcomeMessage.c_str());
+                send(clientSocket, welcomeMessage.c_str());
             }
         }
     }

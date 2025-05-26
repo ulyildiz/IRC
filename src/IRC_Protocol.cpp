@@ -1,4 +1,4 @@
-#include "../include/IRC_Protocol.h"
+#include "../include/IRC_Protocol.hpp"
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
@@ -29,6 +29,33 @@ std::string getLocalIP() {
     return std::string(ip);
 }
 
+IRCUser::IRCUser(int ClientSocket)
+{
+    clientSocket = ClientSocket;
+    nickname = "";
+    username = "";
+    realname = "";
+    registrationState = REG_STATE_INIT;
+}
+
+
+IRCUser::~IRCUser()
+{
+    close(clientSocket);
+}
+
+IRCChannel::IRCChannel(std::string chName, IRCUser* user)
+{
+    name                = chName    ;
+    inviteOnly          = false     ;
+    topicOnlyOps        = false     ;
+    limit               = 0         ;
+    key.clear()                     ;
+    users.clear()                   ;
+    operators.clear()               ;
+    invitedUsers.clear()            ;
+    operators.push_back(user)       ;
+}
 
 // Constructor: _password referansı dışarıdan geçiliyor; serverName constructor içinde set ediliyor.
 IRC_Protocol::IRC_Protocol(int port, const std::string& password)
@@ -36,9 +63,7 @@ IRC_Protocol::IRC_Protocol(int port, const std::string& password)
 {
     _port = port;
     serverName = getLocalIP();  // Otomatik IP adresini alıyoruz.
-    Listener.start(serverName.c_str(), intToString(port).c_str());
-    Listener.setDataHandler(IRC_Protocol::lifeloop, this);
-    
+    start(serverName.c_str(), intToString(port).c_str(), this, this->lifeloop);    
     // Komutları map'e ekle (fonksiyon pointer'ları)
     commandHandlers["PASS"] = &IRC_Protocol::handlePASS;
     commandHandlers["NICK"] = &IRC_Protocol::handleNICK;
@@ -99,7 +124,8 @@ void IRC_Protocol::lifeloop(int clientSocket, const char* data, int length, void
     }
 
     // 2) Yeni kullanıcıysa ekle
-    server->addUserIfNotExists(clientSocket);
+    if (server->connectedUsers.find(clientSocket) == server->connectedUsers.end())
+        server->connectedUsers[clientSocket] = new IRCUser(clientSocket);
 
     // 3) Gelen veriyi kendi buffer’ına ekle
     std::string& buf = server->recvBuffers[clientSocket];
@@ -109,7 +135,7 @@ void IRC_Protocol::lifeloop(int clientSocket, const char* data, int length, void
     size_t pos;
     while ((pos = buf.find("\r\n")) != std::string::npos) {
         std::string line = buf.substr(0, pos);
-        buf.erase(0, pos + 2);  // “\r\n”’u da sil
+        buf.erase(0, pos + 2);  // “\r\n”’u da silj
 
         // 5) Parçala, logla ve handler’a gönder
         IRCMessage msg = server->parser(line);
@@ -124,12 +150,8 @@ void IRC_Protocol::lifeloop(int clientSocket, const char* data, int length, void
     // Not: buf’da kalan kısım henüz tamamlanmamış bir komut, birikiyor.
 }
 
+int start(const char *ip, const char* port, void *IRC, DataHandler handler);
 
-
-int IRC_Protocol::start() {
-        Listener.run();
-    return 1;
-}
 
 // handler: clientSocket'ten kullanıcıyı bulup, komut işleyici fonksiyonunu çağırır.
 void IRC_Protocol::handler(const IRCMessage& msg, int clientSocket) {
@@ -137,12 +159,13 @@ void IRC_Protocol::handler(const IRCMessage& msg, int clientSocket) {
     std::map<int, IRCUser*>::iterator uit = connectedUsers.find(clientSocket);
     if (uit == connectedUsers.end()) {
         // Kullanıcı yoksa ekleyelim.
-        addUserIfNotExists(clientSocket);
+        if (connectedUsers.find(clientSocket) == connectedUsers.end())
+            connectedUsers[clientSocket] = new IRCUser(clientSocket);
         uit = connectedUsers.find(clientSocket);
         // Eğer ekledikten sonra da kullanıcı bulunamazsa hata döndür.
         if (uit == connectedUsers.end()) {
             std::string response = ":" + serverName + " 451 :User not found\r\n";
-            Listener.send(clientSocket, response.c_str());
+            send(clientSocket, response.c_str());
             return;
         }
     }
@@ -154,7 +177,7 @@ void IRC_Protocol::handler(const IRCMessage& msg, int clientSocket) {
         if (msg.command != "PASS" && msg.command != "NICK" && msg.command != "USER") {
             std::string nickForReply = user->nickname.empty() ? "*" : user->nickname;
             std::string response = ":" + serverName + " 451 " + nickForReply + " :You are not registered\r\n";
-            Listener.send(clientSocket, response.c_str());
+            send(clientSocket, response.c_str());
             return;
         }
     }
@@ -167,7 +190,7 @@ void IRC_Protocol::handler(const IRCMessage& msg, int clientSocket) {
     } else {
         std::string nickForReply = user->nickname.empty() ? "*" : user->nickname;
         std::string response = ":" + serverName + " 421 " + nickForReply + " " + msg.command + " :Unknown command\r\n";
-        Listener.send(clientSocket, response.c_str());
+        send(clientSocket, response.c_str());
     }
 }
 

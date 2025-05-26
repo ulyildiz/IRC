@@ -10,7 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../include/IRC_Protocol.h"
+#include "../include/IRC_Protocol.hpp"
 #include <iostream>
 #include <cstdlib>
 
@@ -49,8 +49,13 @@ int main(int argc, char *argv[])
 		return (1);
 	}
 	input_check(argv[1], argv[2]);
-    IRC_Protocol irc(atoi(argv[1]), argv[2]);
-    irc.start();
+	try {
+    	IRC_Protocol irc(atoi(argv[1]), argv[2]);
+    	irc.run();
+	}
+	catch (const std::exception &e) {
+		std::cout << e.what() << std::endl;
+	}
 	return (0);
 }
 //TryCatch Maybe ??
