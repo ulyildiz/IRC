@@ -1,11 +1,11 @@
 #ifndef SIMPLE_TCP_SERVER_HPP
-#define SIMPLE_TCP_SERVER_HPP
+# define SIMPLE_TCP_SERVER_HPP
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <poll.h>
+# include <sys/types.h>
+# include <sys/socket.h>
+# include <poll.h>
 
-#define MAX_CLIENTS 3
+# define MAX_CLIENTS 1024
 
 typedef void (*DataHandler)(int clientSocket, const char* data, int length, void* userData);
 
@@ -19,8 +19,8 @@ class SimpleTcpServer {
 		struct pollfd fds[MAX_CLIENTS + 1];
 		nfds_t	nfds;
 		
-		DataHandler dataHandler;
 		void* handlerUserData;
+		DataHandler dataHandler;
 		
 		void start(const char *ip, const char* port, void *IRC, DataHandler handler);
 		

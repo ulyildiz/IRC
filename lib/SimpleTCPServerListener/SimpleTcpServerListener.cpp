@@ -13,7 +13,7 @@
 
 
 SimpleTcpServer::SimpleTcpServer()
-: nfds(1)
+: nfds(1), handlerUserData(NULL), dataHandler(NULL) 
 {
 	struct sigaction sa;
 	std::memset(&sa, 0, sizeof(sa));
@@ -87,7 +87,7 @@ void SimpleTcpServer::start(const char *ip, const char* port, void *IRC, DataHan
 
 	fds[0].fd = serverSocket;
 	fds[0].events = POLLIN;
-	for (int i = 1; i < MAX_CLIENTS; i++) {
+	for (int i = 1; i < MAX_CLIENTS + 1; i++) {
 		fds[i].fd = -1;
 		fds[i].events = 0;
 		fds[i].revents = 0;
@@ -104,7 +104,7 @@ void SimpleTcpServer::createClientSocket()
     if (clientSocket >= 0) {
         setNonBlocking(clientSocket);
     
-		if (nfds < MAX_CLIENTS)
+		if (nfds < MAX_CLIENTS + 1)
         {
             fds[nfds].fd = clientSocket;
             fds[nfds].events = POLLIN;
@@ -114,7 +114,8 @@ void SimpleTcpServer::createClientSocket()
         else
         {
             std::cerr << "Too many clients." << std::endl;
-            close(clientSocket);
+            send(clientSocket, "Server is full. Try again later.\n");
+			close(clientSocket);
         }
     }
 }

@@ -1,13 +1,24 @@
 #ifndef IRC_PROTOCOL_HPP
-#define IRC_PROTOCOL_HPP
+# define IRC_PROTOCOL_HPP
 
-#include "../lib/SimpleTCPServerListener/SimpleTcpServerListener.hpp"
-#include <vector>
-#include <map>
-#include <iostream>
-#include <sstream>
-#include <algorithm>
+# include "../lib/SimpleTCPServerListener/SimpleTcpServerListener.hpp"
+# include <vector>
+# include <map>
+# include <iostream>
+# include <sstream>
+# include <algorithm>
 
+// Registration Statement Flags
+# define REG_STATE_INIT 0
+# define REG_STATE_PASS 1
+# define REG_STATE_NICK 2
+# define REG_STATE_USER 3
+
+// Numeric replies constant
+# define ERR_NEEDMOREPARAMS 461
+# define ERR_PASSWDMISMATCH 464
+# define ERR_NOTREGISTERED 451
+# define RPL_WELCOME 001
 
 struct IRCMessage {
     std::string prefix;
@@ -27,18 +38,6 @@ struct IRCUser {
     IRCUser(int ClientSocket);
     ~IRCUser();
 };
-
-// Registration Statement Flags
-#define REG_STATE_INIT 0
-#define REG_STATE_PASS 1
-#define REG_STATE_NICK 2
-#define REG_STATE_USER 3
-
-// Numeric replies constant
-#define ERR_NEEDMOREPARAMS 461
-#define ERR_PASSWDMISMATCH 464
-#define ERR_NOTREGISTERED 451
-#define RPL_WELCOME 001
 
 struct IRCChannel {
     std::string name;        // Channel Name, for ex: "#chat"
@@ -101,4 +100,4 @@ public:
     ~IRC_Protocol();
 };
 
-#endif // IRC_PROTOCOL_H
+#endif
