@@ -4,11 +4,9 @@ CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -Iinclude -Ilib/SimpleTCPServerListe
 SRCDIR = src
 OBJDIR = obj
 
-# Ana kaynak dosyaları ve nesneler
 SOURCES := $(wildcard $(SRCDIR)/*.cpp)
 OBJECTS := $(patsubst $(SRCDIR)/%.cpp,$(OBJDIR)/%.o,$(SOURCES))
 
-# Kütüphane dizini ve statik kütüphane
 LIBDIR = lib/SimpleTCPServerListener
 STATIC_LIB = $(LIBDIR)/libSimpleTcpServerListener.a
 
@@ -25,7 +23,6 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	@echo "Compiling $<..."
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-# Kütüphaneyi derlemek için: LIBDIR içerisindeki Makefile çağrılır.
 $(STATIC_LIB):	
 	$(MAKE) -C $(LIBDIR)
 

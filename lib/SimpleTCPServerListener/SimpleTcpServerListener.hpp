@@ -9,11 +9,13 @@
 
 typedef void (*DataHandler)(int clientSocket, const char* data, int length, void* userData);
 
-class SimpleTcpServer {
+class SimpleTcpServer
+{
 	private:
 		void printBoundAddress();
 		void createClientSocket();
 		int setNonBlocking(int fd);
+		static void signalHandler(int signum);
 		
 	protected:
 		struct pollfd fds[MAX_CLIENTS + 1];
@@ -30,8 +32,6 @@ class SimpleTcpServer {
 	public:
 		SimpleTcpServer();
 		~SimpleTcpServer();
-	
-		static void signalHandler(int signum);
 
 		void run();
 };

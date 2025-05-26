@@ -43,7 +43,6 @@ IRCMessage IRC_Protocol::parser(const std::string& rawData) {
     return msg;
 }
 
-
 std::vector<IRCMessage> IRC_Protocol::parseMultiple(const std::string& rawData) {
     std::vector<IRCMessage> messages;
     std::istringstream stream(rawData);

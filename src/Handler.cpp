@@ -2,24 +2,30 @@
 #include <ctime>
 
 // PASS
-void IRC_Protocol::handlePASS(const IRCMessage& msg, IRCUser* user) {
-    if (msg.params.empty()) {
+void IRC_Protocol::handlePASS(const IRCMessage& msg, IRCUser* user)
+{
+    if (msg.params.empty())
+	{
         send(user->clientSocket,
             (":" + serverName + " 461 PASS :Not enough parameters\r\n").c_str());
         return;
     }
-    if (user->registrationState != REG_STATE_INIT) {
+    if (user->registrationState != REG_STATE_INIT)
+	{
         send(user->clientSocket,
             (":" + serverName + " 462 PASS :You may not reregister\r\n").c_str());
         return;
     }
-    if (msg.params[0] == _password) {
+    if (msg.params[0] == _password)
+	{
         user->registrationState = REG_STATE_PASS;
         send(user->clientSocket,
             (":" + serverName + " NOTICE " +
             (user->nickname.empty() ? "*" : user->nickname) +
             " :Password accepted\r\n").c_str());
-    } else {
+    }
+	else
+	{
         send(user->clientSocket,
             (":" + serverName + " 464 PASS :Password incorrect\r\n").c_str());
     }
@@ -27,45 +33,54 @@ void IRC_Protocol::handlePASS(const IRCMessage& msg, IRCUser* user) {
 
 // NICK
 void IRC_Protocol::handleNICK(const IRCMessage& msg, IRCUser* user) {
-    if (msg.params.empty()) {
+    if (msg.params.empty())
+	{
         send(user->clientSocket,
             (":" + serverName + " 461 NICK :Not enough parameters\r\n").c_str());
         return;
     }
-    if (user->registrationState < REG_STATE_PASS) {
+    if (user->registrationState < REG_STATE_PASS)
+	{
         send(user->clientSocket,
             (":" + serverName + " 451 NICK :You must send PASS before NICK\r\n").c_str());
         return;
     }
     std::string newNick = msg.params[0];
-    // Çakışma kontrolü
+
     std::map<int, IRCUser*>::iterator uit;
-    for (uit = connectedUsers.begin(); uit != connectedUsers.end(); ++uit) {
-        if (uit->second->nickname == newNick) {
+    for (uit = connectedUsers.begin(); uit != connectedUsers.end(); ++uit)
+	{
+        if (uit->second->nickname == newNick)
+		{
             send(user->clientSocket,
                 (":" + serverName + " 433 * " + newNick + " :Nickname is already in use\r\n").c_str());
             return;
         }
     }
-    user->nickname = newNick;
+    
+	user->nickname = newNick;
     user->registrationState = REG_STATE_NICK;
     send(user->clientSocket,
         (":" + serverName + " NICK " + newNick + "\r\n").c_str());
 }
 
 // USER
-void IRC_Protocol::handleUSER(const IRCMessage& msg, IRCUser* user) {
-    if (msg.params.size() < 4) {
+void IRC_Protocol::handleUSER(const IRCMessage& msg, IRCUser* user)
+{
+    if (msg.params.size() < 4)
+	{
         send(user->clientSocket,
             (":" + serverName + " 461 USER :Not enough parameters\r\n").c_str());
         return;
     }
-    if (user->registrationState < REG_STATE_NICK) {
+    if (user->registrationState < REG_STATE_NICK)
+	{
         send(user->clientSocket,
             (":" + serverName + " 451 USER :You must send NICK before USER\r\n").c_str());
         return;
     }
-    user->username = msg.params[0];
+    
+	user->username = msg.params[0];
     user->realname = msg.params[3];
     user->registrationState = REG_STATE_USER;
     send(user->clientSocket,
@@ -74,9 +89,10 @@ void IRC_Protocol::handleUSER(const IRCMessage& msg, IRCUser* user) {
 }
 
 // PRIVMSG
-void IRC_Protocol::handlePRIVMSG(const IRCMessage& msg, IRCUser* user) {
-    // 1) Parametre sayısı
-    if (msg.params.size() < 2) {
+void IRC_Protocol::handlePRIVMSG(const IRCMessage& msg, IRCUser* user)
+{
+    if (msg.params.size() < 2)
+	{
         send(user->clientSocket,
             (":" + serverName + " 461 PRIVMSG :Not enough parameters\r\n").c_str());
         return;
@@ -87,31 +103,37 @@ void IRC_Protocol::handlePRIVMSG(const IRCMessage& msg, IRCUser* user) {
     std::string prefix = ":" + user->nickname + "!" + user->username + "@" + serverName;
     std::string resp   = prefix + " PRIVMSG " + target + " :" + text + "\r\n";
 
-    // 2) Kanal mesajı mı?
-    if (!target.empty() && target[0] == '#') {
-        // Kanal var mı?
+    if (!target.empty() && target[0] == '#')
+	{
         std::map<std::string, IRCChannel*>::iterator cit = channels.find(target);
-        if (cit == channels.end()) {
+        if (cit == channels.end())
+		{
             send(user->clientSocket,
                 (":" + serverName + " 403 " + target + " :No such channel\r\n").c_str());
             return;
         }
         IRCChannel* ch = cit->second;
 
-        // Gönderen kanalda mı?
         bool inChannel = false;
-        for (std::vector<IRCUser*>::iterator uit = ch->users.begin(); uit != ch->users.end(); ++uit) {
-            if (*uit == user) { inChannel = true; break; }
+        for (std::vector<IRCUser*>::iterator uit = ch->users.begin(); uit != ch->users.end(); ++uit)
+		{
+            if (*uit == user)
+			{
+				inChannel = true;
+				break;
+			}
         }
-        if (!inChannel) {
+
+        if (!inChannel)
+		{
             send(user->clientSocket,
                 (":" + serverName + " 442 " + user->nickname + " " + target +
                  " :You're not on that channel\r\n").c_str());
             return;
         }
 
-        // 3) Özel bot komutu (!joke)
-        if (text == "!joke") {
+        if (text == "!joke")
+		{
             std::vector<std::string> jokes;
             jokes.push_back("Neden bilgisayar çöker? Çünkü pencereyi açmıştır.");
             jokes.push_back("Programcı sabah kahve içmeden boot edemez.");
@@ -133,37 +155,39 @@ void IRC_Protocol::handlePRIVMSG(const IRCMessage& msg, IRCUser* user) {
             srand(time(NULL));
             std::string joke = jokes[rand() % jokes.size()];
 
-            // Bot'u bul
-            for (std::vector<IRCUser*>::iterator uit = ch->users.begin(); uit != ch->users.end(); ++uit) {
-                if ((*uit)->isBot) {
+            for (std::vector<IRCUser*>::iterator uit = ch->users.begin(); uit != ch->users.end(); ++uit)
+			{
+                if ((*uit)->isBot)
+				{
                     std::string jokeMsg = ":" + (*uit)->nickname + "!bot@" + serverName +
                                           " PRIVMSG " + ch->name + " :" + joke + "\r\n";
-                    for (std::vector<IRCUser*>::iterator it = ch->users.begin(); it != ch->users.end(); ++it) {
+                    for (std::vector<IRCUser*>::iterator it = ch->users.begin(); it != ch->users.end(); ++it)
                         send((*it)->clientSocket, jokeMsg.c_str());
-                    }
                     return;
                 }
             }
         }
 
-        // Normal broadcast (gönderen hariç)
-        for (std::vector<IRCUser*>::iterator uit = ch->users.begin(); uit != ch->users.end(); ++uit) {
-            if (*uit != user) {
+        for (std::vector<IRCUser*>::iterator uit = ch->users.begin(); uit != ch->users.end(); ++uit)
+		{
+            if (*uit != user)
                 send((*uit)->clientSocket, resp.c_str());
-            }
         }
         return;
     }
 
-    // 4) Bire bir mesaj (PM)
     int targetSock = -1;
-    for (std::map<int, IRCUser*>::iterator sit = connectedUsers.begin(); sit != connectedUsers.end(); ++sit) {
-        if (sit->second->nickname == target) {
+    for (std::map<int, IRCUser*>::iterator sit = connectedUsers.begin(); sit != connectedUsers.end(); ++sit)
+	{
+        if (sit->second->nickname == target)
+		{
             targetSock = sit->first;
             break;
         }
     }
-    if (targetSock == -1) {
+    
+	if (targetSock == -1)
+	{
         send(user->clientSocket,
             (":" + serverName + " 401 " + target + " :No such nick/channel\r\n").c_str());
         return;
@@ -173,8 +197,10 @@ void IRC_Protocol::handlePRIVMSG(const IRCMessage& msg, IRCUser* user) {
 }
 
 //JOIN
-void IRC_Protocol::handleJOIN(const IRCMessage& msg, IRCUser* user) {
-    if (msg.params.empty()) {
+void IRC_Protocol::handleJOIN(const IRCMessage& msg, IRCUser* user)
+{
+    if (msg.params.empty())
+	{
         send(user->clientSocket,
             (":" + serverName + " 461 JOIN :Not enough parameters\r\n").c_str());
         return;
@@ -183,7 +209,8 @@ void IRC_Protocol::handleJOIN(const IRCMessage& msg, IRCUser* user) {
     std::string chName = msg.params[0];
     std::string key    = (msg.params.size() > 1 ? msg.params[1] : "");
 
-    if (chName.empty() || chName[0] != '#') {
+    if (chName.empty() || chName[0] != '#')
+	{
         send(user->clientSocket,
             (":" + serverName + " 403 " + chName + " :Invalid channel name\r\n").c_str());
         return;
@@ -193,18 +220,26 @@ void IRC_Protocol::handleJOIN(const IRCMessage& msg, IRCUser* user) {
     std::map<std::string, IRCChannel*>::iterator cit = channels.find(chName);
     bool isNewChannel = (cit == channels.end());
 
-    if (isNewChannel) {
+    if (isNewChannel) 
+	{
         ch = new IRCChannel(chName, user);
         channels[chName] = ch;
-    } else {
+    }
+	else
+	{
         ch = cit->second;
 
-        if (ch->inviteOnly) {
+        if (ch->inviteOnly)
+		{
             bool invited = false;
-            for (std::vector<IRCUser*>::iterator iit = ch->invitedUsers.begin(); iit != ch->invitedUsers.end(); ++iit) {
-                if (*iit == user) { invited = true; break; }
-            }
-            if (!invited) {
+            for (std::vector<IRCUser*>::iterator iit = ch->invitedUsers.begin(); iit != ch->invitedUsers.end(); ++iit)
+                if (*iit == user)
+				{
+					invited = true;
+					break;
+				}
+            if (!invited)
+			{
                 send(user->clientSocket,
                     (":" + serverName + " 473 " + user->nickname + " " + chName +
                      " :Cannot join channel (+i)\r\n").c_str());
@@ -212,14 +247,16 @@ void IRC_Protocol::handleJOIN(const IRCMessage& msg, IRCUser* user) {
             }
         }
 
-        if (!ch->key.empty() && ch->key != key) {
+        if (!ch->key.empty() && ch->key != key)
+		{
             send(user->clientSocket,
                 (":" + serverName + " 475 " + user->nickname + " " + chName +
                  " :Cannot join channel (+k)\r\n").c_str());
             return;
         }
 
-        if (ch->limit > 0 && (int)ch->users.size() >= ch->limit) {
+        if (ch->limit > 0 && (int)ch->users.size() >= ch->limit)
+		{
             send(user->clientSocket,
                 (":" + serverName + " 471 " + user->nickname + " " + chName +
                  " :Cannot join channel (+l)\r\n").c_str());
@@ -229,16 +266,24 @@ void IRC_Protocol::handleJOIN(const IRCMessage& msg, IRCUser* user) {
 
     std::vector<IRCUser*>::iterator uit;
     bool already = false;
-    for (uit = ch->users.begin(); uit != ch->users.end(); ++uit) {
-        if (*uit == user) { already = true; break; }
+    for (uit = ch->users.begin(); uit != ch->users.end(); ++uit)
+	{
+        if (*uit == user)
+		{
+			already = true;
+			break;
+		}
     }
-    if (!already) {
+    if (!already)
+	{
         ch->users.push_back(user);
         user->channels.push_back(chName);
 
-        for (std::vector<IRCUser*>::iterator bit = ch->users.begin(); bit != ch->users.end(); ++bit) {
+        for (std::vector<IRCUser*>::iterator bit = ch->users.begin(); bit != ch->users.end(); ++bit)
+		{
             IRCUser* possibleBot = *bit;
-            if (possibleBot->username == "bot") {
+            if (possibleBot->username == "bot")
+			{
                 std::string welcomeMsg = ":" + possibleBot->nickname + "!bot@" + serverName +
                                          " PRIVMSG " + user->nickname +
                                          " :Hoş geldin " + user->nickname + ", kanala hoş geldin!\r\n";
@@ -250,11 +295,11 @@ void IRC_Protocol::handleJOIN(const IRCMessage& msg, IRCUser* user) {
 
     std::string joinMsg = ":" + user->nickname + "!" + user->username + "@" +
                           serverName + " JOIN " + chName + "\r\n";
-    for (uit = ch->users.begin(); uit != ch->users.end(); ++uit) {
+    for (uit = ch->users.begin(); uit != ch->users.end(); ++uit)
         send((*uit)->clientSocket, joinMsg.c_str());
-    }
 
-    if (isNewChannel) {
+    if (isNewChannel)
+	{
         std::string modeMsg = ":" + serverName + " MODE " + chName +
                               " +o " + user->nickname + "\r\n";
         send(user->clientSocket, modeMsg.c_str());
@@ -262,9 +307,9 @@ void IRC_Protocol::handleJOIN(const IRCMessage& msg, IRCUser* user) {
 
     std::string namesList = ":" + serverName + " 353 " + user->nickname +
                             " = " + chName + " :";
-    for (uit = ch->users.begin(); uit != ch->users.end(); ++uit) {
+    for (uit = ch->users.begin(); uit != ch->users.end(); ++uit)
         namesList += (*uit)->nickname + " ";
-    }
+
     namesList += "\r\n";
     send(user->clientSocket, namesList.c_str());
 
@@ -275,8 +320,10 @@ void IRC_Protocol::handleJOIN(const IRCMessage& msg, IRCUser* user) {
 
 
 // PART
-void IRC_Protocol::handlePART(const IRCMessage& msg, IRCUser* user) {
-    if (msg.params.empty()) {
+void IRC_Protocol::handlePART(const IRCMessage& msg, IRCUser* user)
+{
+    if (msg.params.empty())
+	{
         send(user->clientSocket,
             (":" + serverName + " 461 PART :Not enough parameters\r\n").c_str());
         return;
@@ -286,7 +333,8 @@ void IRC_Protocol::handlePART(const IRCMessage& msg, IRCUser* user) {
     std::string reason = (msg.params.size() > 1 ? msg.params[1] : "Leaving");
 
     std::map<std::string, IRCChannel*>::iterator cit = channels.find(chName);
-    if (cit == channels.end()) {
+    if (cit == channels.end())
+	{
         send(user->clientSocket,
             (":" + serverName + " 403 " + chName + " :No such channel\r\n").c_str());
         return;
@@ -294,67 +342,68 @@ void IRC_Protocol::handlePART(const IRCMessage& msg, IRCUser* user) {
 
     IRCChannel* ch = cit->second;
 
-    // Kullanıcı kanalda mı?
     std::vector<IRCUser*>::iterator uit;
-    for (uit = ch->users.begin(); uit != ch->users.end(); ++uit) {
+    for (uit = ch->users.begin(); uit != ch->users.end(); ++uit)
+	{
         if (*uit == user)
             break;
     }
-    if (uit == ch->users.end()) {
+    if (uit == ch->users.end())
+	{
         send(user->clientSocket,
             (":" + serverName + " 442 " + user->nickname + " " + chName +
              " :You're not on that channel\r\n").c_str());
         return;
     }
 
-    // PART mesajı
     std::string partMsg = ":" + user->nickname + "!" + user->username + "@" +
                           serverName + " PART " + chName + " :" + reason + "\r\n";
 
-    // Tüm kullanıcılara bildir
-    for (std::vector<IRCUser*>::iterator u = ch->users.begin(); u != ch->users.end(); ++u) {
+    for (std::vector<IRCUser*>::iterator u = ch->users.begin(); u != ch->users.end(); ++u)
         send((*u)->clientSocket, partMsg.c_str());
-    }
 
-    // Listelerden çıkar
     ch->users.erase(uit);
     ch->operators.erase(std::remove(ch->operators.begin(), ch->operators.end(), user), ch->operators.end());
 
-    for (std::vector<std::string>::iterator sit = user->channels.begin(); sit != user->channels.end(); ++sit) {
-        if (*sit == chName) {
+    for (std::vector<std::string>::iterator sit = user->channels.begin(); sit != user->channels.end(); ++sit)
+	{
+        if (*sit == chName)
+		{
             user->channels.erase(sit);
             break;
         }
     }
 
-    // Kanal boşsa tamamen sil
-    if (ch->users.empty()) {
+    if (ch->users.empty())
+	{
         channels.erase(chName);
         delete ch;
-    } else {
-        // Operatör yoksa yenisini ata ve bildir
-        if (ch->operators.empty()) {
+    }
+	else
+	{
+        if (ch->operators.empty())
+		{
             IRCUser* newOp = ch->users.front();
             ch->operators.push_back(newOp);
 
             std::string modeMsg = ":" + serverName + " MODE " + chName +
                                   " +o " + newOp->nickname + "\r\n";
-            for (std::vector<IRCUser*>::iterator u = ch->users.begin(); u != ch->users.end(); ++u) {
+            for (std::vector<IRCUser*>::iterator u = ch->users.begin(); u != ch->users.end(); ++u)
                 send((*u)->clientSocket, modeMsg.c_str());
-            }
         }
     }
 }
 
-void IRC_Protocol::handleQUIT(const IRCMessage& msg, IRCUser* user) {
+void IRC_Protocol::handleQUIT(const IRCMessage& msg, IRCUser* user)
+{
     std::string reason = msg.params.empty() ? "Client Quit" : msg.params[0];
     std::string quitMsg = ":" + user->nickname + "!" + user->username + "@" +
                           serverName + " QUIT :" + reason + "\r\n";
 
-    // Tüm kanalları kopyalayarak işle (iterator invalidation'a karşı)
     std::vector<std::string> userChannels = user->channels;
 
-    for (std::vector<std::string>::iterator sit = userChannels.begin(); sit != userChannels.end(); ++sit) {
+    for (std::vector<std::string>::iterator sit = userChannels.begin(); sit != userChannels.end(); ++sit)
+	{
         std::map<std::string, IRCChannel*>::iterator cit = channels.find(*sit);
         if (cit == channels.end())
             continue; // ekstra güvenlik kontrolü
@@ -362,10 +411,10 @@ void IRC_Protocol::handleQUIT(const IRCMessage& msg, IRCUser* user) {
         IRCChannel* ch = cit->second;
 
         // Tüm diğer kullanıcılara QUIT mesajı gönder
-        for (std::vector<IRCUser*>::iterator uit = ch->users.begin(); uit != ch->users.end(); ++uit) {
-            if (*uit != user) {
+        for (std::vector<IRCUser*>::iterator uit = ch->users.begin(); uit != ch->users.end(); ++uit)
+		{
+            if (*uit != user)
                 send((*uit)->clientSocket, quitMsg.c_str());
-            }
         }
 
         // Kullanıcıyı kanaldan çıkar
@@ -373,22 +422,24 @@ void IRC_Protocol::handleQUIT(const IRCMessage& msg, IRCUser* user) {
         ch->operators.erase(std::remove(ch->operators.begin(), ch->operators.end(), user), ch->operators.end());
 
         // Kanal boşsa sil
-        if (ch->users.empty()) {
+        if (ch->users.empty())
+		{
             channels.erase(*sit);
             delete ch;
         }
-        else {
+        else
+		{
             // Operatör yoksa yeni birini ata ve bildir
-            if (ch->operators.empty() && !ch->users.empty()) {
+            if (ch->operators.empty() && !ch->users.empty())
+			{
                 IRCUser* newOp = ch->users.front();
                 ch->operators.push_back(newOp);
 
                 std::string modeMsg = ":" + serverName + " MODE " + ch->name +
                                       " +o " + newOp->nickname + "\r\n";
 
-                for (std::vector<IRCUser*>::iterator uit = ch->users.begin(); uit != ch->users.end(); ++uit) {
+                for (std::vector<IRCUser*>::iterator uit = ch->users.begin(); uit != ch->users.end(); ++uit)
                     send((*uit)->clientSocket, modeMsg.c_str());
-                }
             }
         }
     }
@@ -410,22 +461,28 @@ void IRC_Protocol::handleQUIT(const IRCMessage& msg, IRCUser* user) {
 }
 
 // WHO
-void IRC_Protocol::handleWHO(const IRCMessage& msg, IRCUser* user) {
-    if (msg.params.empty()) {
+void IRC_Protocol::handleWHO(const IRCMessage& msg, IRCUser* user)
+{
+    if (msg.params.empty())
+	{
         send(user->clientSocket,
             (":" + serverName + " 461 WHO :Not enough parameters\r\n").c_str());
         return;
     }
-    std::string chName = msg.params[0];
+
+	std::string chName = msg.params[0];
     std::map<std::string, IRCChannel*>::iterator cit = channels.find(chName);
-    if (cit == channels.end()) {
+    if (cit == channels.end())
+	{
         send(user->clientSocket,
             (":" + serverName + " 403 " + chName + " :No such channel\r\n").c_str());
         return;
     }
     IRCChannel* ch = cit->second;
-    std::vector<IRCUser*>::iterator uit;
-    for (uit = ch->users.begin(); uit != ch->users.end(); ++uit) {
+    
+	std::vector<IRCUser*>::iterator uit;
+    for (uit = ch->users.begin(); uit != ch->users.end(); ++uit)
+	{
         send(user->clientSocket,
             (":" + serverName + " 352 " + user->nickname + " " + chName +
              " host " + serverName + " " + (*uit)->nickname +
@@ -437,10 +494,13 @@ void IRC_Protocol::handleWHO(const IRCMessage& msg, IRCUser* user) {
 }
 
 // LIST
-void IRC_Protocol::handleLIST(const IRCMessage& msg, IRCUser* user) {
-    if (msg.params.empty()) {
+void IRC_Protocol::handleLIST(const IRCMessage& msg, IRCUser* user) //kontrol et
+{
+    if (msg.params.empty())
+	{
         std::map<std::string, IRCChannel*>::iterator cit;
-        for (cit = channels.begin(); cit != channels.end(); ++cit) {
+        for (cit = channels.begin(); cit != channels.end(); ++cit)
+		{
             // kullanıcı sayısını dönüştür
             std::ostringstream oss;
             oss << cit->second->users.size();
@@ -457,8 +517,10 @@ void IRC_Protocol::handleLIST(const IRCMessage& msg, IRCUser* user) {
 }
 
 // TOPIC
-void IRC_Protocol::handleTOPIC(const IRCMessage& msg, IRCUser* user) {
-    if (msg.params.empty()) {
+void IRC_Protocol::handleTOPIC(const IRCMessage& msg, IRCUser* user)
+{
+    if (msg.params.empty())
+	{
         send(user->clientSocket,
             (":" + serverName + " 461 TOPIC :Not enough parameters\r\n").c_str());
         return;
@@ -466,7 +528,8 @@ void IRC_Protocol::handleTOPIC(const IRCMessage& msg, IRCUser* user) {
     std::string chName = msg.params[0];
 
     std::map<std::string, IRCChannel*>::iterator cit = channels.find(chName);
-    if (cit == channels.end()) {
+    if (cit == channels.end())
+	{
         send(user->clientSocket,
             (":" + serverName + " 403 " + chName + " :No such channel\r\n").c_str());
         return;
@@ -475,18 +538,24 @@ void IRC_Protocol::handleTOPIC(const IRCMessage& msg, IRCUser* user) {
 
     std::vector<IRCUser*>::iterator uit;
 
-    if (msg.params.size() == 1) {
+    if (msg.params.size() == 1)
         send(user->clientSocket,
             (":" + serverName + " 332 " + user->nickname + " " + chName +
              " :" + ch->topic + "\r\n").c_str());
-    }
-    else {
+    else
+	{
         bool isOp = false;
         std::vector<IRCUser*>::iterator oit;
-        for (oit = ch->operators.begin(); oit != ch->operators.end(); ++oit) {
-            if (*oit == user) { isOp = true; break; }
+        for (oit = ch->operators.begin(); oit != ch->operators.end(); ++oit)
+		{
+            if (*oit == user)
+			{
+				isOp = true;
+				break;
+			}
         }
-        if (ch->topicOnlyOps && !isOp) {
+        if (ch->topicOnlyOps && !isOp)
+		{
             send(user->clientSocket,
                 (":" + serverName + " 482 " + user->nickname + " " + chName +
                  " :You're not channel operator\r\n").c_str());
@@ -497,15 +566,16 @@ void IRC_Protocol::handleTOPIC(const IRCMessage& msg, IRCUser* user) {
         std::string tmsg = ":" + user->nickname + "!" + user->username + "@" +
                            serverName + " TOPIC " + chName + " :" + ch->topic + "\r\n";
 
-        for (uit = ch->users.begin(); uit != ch->users.end(); ++uit) {
+        for (uit = ch->users.begin(); uit != ch->users.end(); ++uit)
             send((*uit)->clientSocket, tmsg.c_str());
-        }
     }
 }
 
 // MODE
-void IRC_Protocol::handleMODE(const IRCMessage& msg, IRCUser* user) {
-    if (msg.params.empty()) {
+void IRC_Protocol::handleMODE(const IRCMessage& msg, IRCUser* user)
+{
+    if (msg.params.empty())
+	{
         send(user->clientSocket,
             (":" + serverName + " 461 MODE :Not enough parameters\r\n").c_str());
         return;
@@ -513,7 +583,8 @@ void IRC_Protocol::handleMODE(const IRCMessage& msg, IRCUser* user) {
 
     std::string chName = msg.params[0];
     std::map<std::string, IRCChannel*>::iterator cit = channels.find(chName);
-    if (cit == channels.end()) {
+    if (cit == channels.end())
+	{
         send(user->clientSocket,
             (":" + serverName + " 403 " + chName + " :No such channel\r\n").c_str());
         return;
@@ -522,18 +593,22 @@ void IRC_Protocol::handleMODE(const IRCMessage& msg, IRCUser* user) {
     IRCChannel* ch = cit->second;
 
     // === 1) Sadece bilgi sorgusuysa (örneğin MODE #channel) ===
-    if (msg.params.size() == 1) {
+    if (msg.params.size() == 1)
+	{
         std::string modes = "+";
         std::string modeArgs;
 
         if (ch->inviteOnly) modes += "i";
         if (ch->topicOnlyOps) modes += "t";
-        if (!ch->key.empty()) {
+        if (!ch->key.empty())
+		{
             modes += "k";
             // Eğer kullanıcı içerideyse key göster, değilse *
             bool inChan = false;
-            for (size_t i = 0; i < ch->users.size(); ++i) {
-                if (ch->users[i] == user) {
+            for (size_t i = 0; i < ch->users.size(); ++i)
+			{
+                if (ch->users[i] == user)
+				{
                     inChan = true;
                     break;
                 }
@@ -541,7 +616,8 @@ void IRC_Protocol::handleMODE(const IRCMessage& msg, IRCUser* user) {
             modeArgs += " ";
             modeArgs += (inChan ? ch->key : "*");
         }
-        if (ch->limit > 0) {
+        if (ch->limit > 0)
+		{
             modes += "l";
             std::ostringstream oss;
             oss << ch->limit;
@@ -563,10 +639,16 @@ void IRC_Protocol::handleMODE(const IRCMessage& msg, IRCUser* user) {
     // === 2) MOD ATAMA işlemleri ===
     std::string modes = msg.params[1];
     bool isOp = false;
-    for (std::vector<IRCUser*>::iterator oit = ch->operators.begin(); oit != ch->operators.end(); ++oit) {
-        if (*oit == user) { isOp = true; break; }
+    for (std::vector<IRCUser*>::iterator oit = ch->operators.begin(); oit != ch->operators.end(); ++oit)
+	{
+        if (*oit == user)
+		{
+			isOp = true;
+			break;
+		}
     }
-    if (!isOp) {
+    if (!isOp)
+	{
         send(user->clientSocket,
             (":" + serverName + " 482 " + user->nickname + " " + chName +
              " :You're not channel operator\r\n").c_str());
@@ -574,31 +656,42 @@ void IRC_Protocol::handleMODE(const IRCMessage& msg, IRCUser* user) {
     }
 
     bool add = true;
-    for (size_t i = 0; i < modes.size(); ++i) {
+    for (size_t i = 0; i < modes.size(); ++i)
+	{
         char c = modes[i];
-        if (c == '+') add = true;
-        else if (c == '-') add = false;
-        else {
-            if (c == 'i') ch->inviteOnly = add;
-            else if (c == 't') ch->topicOnlyOps = add;
-            else if (c == 'k') {
-                if (add && msg.params.size() > 2) {
+        
+		if (c == '+')
+			add = true;
+        else if (c == '-')
+			add = false;
+        else
+		{
+            if (c == 'i')
+				ch->inviteOnly = add;
+            else if (c == 't')
+				ch->topicOnlyOps = add;
+            else if (c == 'k')
+			{
+                if (add && msg.params.size() > 2) 
                     ch->key = msg.params[2];
-                } else if (!add) {
+                else if (!add)
                     ch->key.clear();
-                }
             }
-            else if (c == 'l') {
-                if (add && msg.params.size() > 2) {
+            else if (c == 'l')
+			{
+                if (add && msg.params.size() > 2)
                     ch->limit = std::atoi(msg.params[2].c_str());
-                } else if (!add) {
+                else if (!add) 
                     ch->limit = 0;
-                }
             }
-            else if (c == 'o' && msg.params.size() > 2) {
+            else if (c == 'o' && msg.params.size() > 2)
+			{
                 std::string nick = msg.params[2];
-                for (size_t j = 0; j < ch->users.size(); ++j) {
-                    if (ch->users[j]->nickname == nick) {
+            
+				for (size_t j = 0; j < ch->users.size(); ++j)
+				{
+                    if (ch->users[j]->nickname == nick)
+					{
                         if (add)
                             ch->operators.push_back(ch->users[j]);
                         else
@@ -616,22 +709,25 @@ void IRC_Protocol::handleMODE(const IRCMessage& msg, IRCUser* user) {
     if (msg.params.size() > 2) reply += " " + msg.params[2];
     reply += "\r\n";
 
-    for (size_t i = 0; i < ch->users.size(); ++i) {
+    for (size_t i = 0; i < ch->users.size(); ++i)
         send(ch->users[i]->clientSocket, reply.c_str());
-    }
 }
 
 // INVITE
-void IRC_Protocol::handleINVITE(const IRCMessage& msg, IRCUser* user) {
-    if (msg.params.size() < 2) {
+void IRC_Protocol::handleINVITE(const IRCMessage& msg, IRCUser* user)
+{
+    if (msg.params.size() < 2)
+	{
         send(user->clientSocket,
             (":" + serverName + " 461 INVITE :Not enough parameters\r\n").c_str());
         return;
     }
-    std::string nick   = msg.params[0];
+    
+	std::string nick   = msg.params[0];
     std::string chName = msg.params[1];
     std::map<std::string, IRCChannel*>::iterator cit = channels.find(chName);
-    if (cit == channels.end()) {
+    if (cit == channels.end())
+	{
         send(user->clientSocket,
             (":" + serverName + " 403 " + chName + " :No such channel\r\n").c_str());
         return;
@@ -639,18 +735,27 @@ void IRC_Protocol::handleINVITE(const IRCMessage& msg, IRCUser* user) {
     IRCChannel* ch = cit->second;
     bool isOp = false;
     std::vector<IRCUser*>::iterator oit2;
-    for (oit2 = ch->operators.begin(); oit2 != ch->operators.end(); ++oit2) {
-        if (*oit2 == user) { isOp = true; break; }
+    for (oit2 = ch->operators.begin(); oit2 != ch->operators.end(); ++oit2)
+	{
+        if (*oit2 == user)
+		{
+			isOp = true;
+			break;
+		}
     }
-    if (! isOp) {
+    if (! isOp)
+	{
         send(user->clientSocket,
             (":" + serverName + " 482 " + user->nickname + " " + chName +
              " :You're not channel operator\r\n").c_str());
         return;
     }
-    std::map<int, IRCUser*>::iterator uit4;
-    for (uit4 = connectedUsers.begin(); uit4 != connectedUsers.end(); ++uit4) {
-        if (uit4->second->nickname == nick) {
+    
+	std::map<int, IRCUser*>::iterator uit4;
+    for (uit4 = connectedUsers.begin(); uit4 != connectedUsers.end(); ++uit4)
+	{
+        if (uit4->second->nickname == nick)
+		{
             ch->invitedUsers.push_back(uit4->second);
             send(uit4->first,
                 (":" + user->nickname + "!" + user->username + "@" + serverName +
@@ -666,8 +771,10 @@ void IRC_Protocol::handleINVITE(const IRCMessage& msg, IRCUser* user) {
 }
 
 // BOT
-void IRC_Protocol::handleBOT(const IRCMessage& msg, IRCUser* user) {
-    if (msg.params.size() < 2) {
+void IRC_Protocol::handleBOT(const IRCMessage& msg, IRCUser* user)
+{
+    if (msg.params.size() < 2)
+	{
         send(user->clientSocket,
             (":" + serverName + " 461 BOT :Not enough parameters\r\n").c_str());
         return;
@@ -677,7 +784,8 @@ void IRC_Protocol::handleBOT(const IRCMessage& msg, IRCUser* user) {
     std::string chName = msg.params[1];
 
     std::map<std::string, IRCChannel*>::iterator cit = channels.find(chName);
-    if (cit == channels.end()) {
+    if (cit == channels.end())
+	{
         send(user->clientSocket,
             (":" + serverName + " 403 " + chName + " :No such channel\r\n").c_str());
         return;
@@ -687,13 +795,16 @@ void IRC_Protocol::handleBOT(const IRCMessage& msg, IRCUser* user) {
 
     // Operatör kontrolü
     bool isOp = false;
-    for (size_t i = 0; i < ch->operators.size(); ++i) {
-        if (ch->operators[i] == user) {
+    for (size_t i = 0; i < ch->operators.size(); ++i)
+	{
+        if (ch->operators[i] == user)
+		{
             isOp = true;
             break;
         }
     }
-    if (!isOp) {
+    if (!isOp)
+	{
         send(user->clientSocket,
             (":" + serverName + " 482 " + user->nickname + " " + chName +
              " :You're not channel operator\r\n").c_str());
@@ -719,7 +830,8 @@ void IRC_Protocol::handleBOT(const IRCMessage& msg, IRCUser* user) {
     std::string greetMsg = ":" + botNick + "!bot@" + serverName +
                            " PRIVMSG " + chName + " :Hello, I am a bot!\r\n";
 
-    for (size_t i = 0; i < ch->users.size(); ++i) {
+    for (size_t i = 0; i < ch->users.size(); ++i)
+	{
         send(ch->users[i]->clientSocket, joinMsg.c_str());
         send(ch->users[i]->clientSocket, greetMsg.c_str());
     }
@@ -730,31 +842,35 @@ void IRC_Protocol::handleBOT(const IRCMessage& msg, IRCUser* user) {
 }
 
 // CAP
-void IRC_Protocol::handleCAP(const IRCMessage& msg, IRCUser* user) {
-    if (msg.params.empty()) {
+void IRC_Protocol::handleCAP(const IRCMessage& msg, IRCUser* user)
+{
+    if (msg.params.empty())
+	{
         send(user->clientSocket,
             (":" + serverName + " 461 CAP :Not enough parameters\r\n").c_str());
         return;
     }
-    if (msg.params[0] == "LS") {
+    if (msg.params[0] == "LS")
         send(user->clientSocket,
             (":" + serverName + " CAP * :\r\n").c_str());
-    } else {
+    else
         send(user->clientSocket,
             (":" + serverName + " 410 CAP :Unsupported subcommand\r\n").c_str());
-    }
 }
 
 // PING
-void IRC_Protocol::handlePING(const IRCMessage& msg, IRCUser* user) {
+void IRC_Protocol::handlePING(const IRCMessage& msg, IRCUser* user)
+{
     std::string payload = (msg.params.empty() ? serverName : msg.params[0]);
     std::string response = "PONG :" + payload + "\r\n";
     send(user->clientSocket, response.c_str());
 }
 
 // KICK
-void IRC_Protocol::handleKICK(const IRCMessage& msg, IRCUser* user) {
-    if (msg.params.size() < 2) {
+void IRC_Protocol::handleKICK(const IRCMessage& msg, IRCUser* user)
+{
+    if (msg.params.size() < 2)
+	{
         send(user->clientSocket,
             (":" + serverName + " 461 KICK :Not enough parameters\r\n").c_str());
         return;
@@ -763,7 +879,8 @@ void IRC_Protocol::handleKICK(const IRCMessage& msg, IRCUser* user) {
     const std::string& targetNick  = msg.params[1];
 
     std::map<std::string, IRCChannel*>::iterator cit = channels.find(channelName);
-    if (cit == channels.end()) {
+    if (cit == channels.end())
+	{
         send(user->clientSocket,
             (":" + serverName + " 403 " + channelName + " :No such channel\r\n").c_str());
         return;
@@ -771,10 +888,16 @@ void IRC_Protocol::handleKICK(const IRCMessage& msg, IRCUser* user) {
     IRCChannel* ch = cit->second;
 
     bool isOp = false;
-    for (std::vector<IRCUser*>::iterator oit = ch->operators.begin(); oit != ch->operators.end(); ++oit) {
-        if (*oit == user) { isOp = true; break; }
+    for (std::vector<IRCUser*>::iterator oit = ch->operators.begin(); oit != ch->operators.end(); ++oit)
+	{
+        if (*oit == user)
+		{
+			isOp = true;
+			break;
+		}
     }
-    if (!isOp) {
+    if (!isOp)
+	{
         send(user->clientSocket,
             (":" + serverName + " 482 " + user->nickname + " " + channelName +
              " :You're not channel operator\r\n").c_str());
@@ -782,13 +905,16 @@ void IRC_Protocol::handleKICK(const IRCMessage& msg, IRCUser* user) {
     }
 
     IRCUser* targetUser = NULL;
-    for (std::vector<IRCUser*>::iterator uit = ch->users.begin(); uit != ch->users.end(); ++uit) {
-        if ((*uit)->nickname == targetNick) {
+    for (std::vector<IRCUser*>::iterator uit = ch->users.begin(); uit != ch->users.end(); ++uit)
+	{
+        if ((*uit)->nickname == targetNick)
+		{
             targetUser = *uit;
             break;
         }
     }
-    if (!targetUser) {
+    if (!targetUser)
+	{
         send(user->clientSocket,
             (":" + serverName + " 441 " + targetNick + " " + channelName +
              " :They aren't on that channel\r\n").c_str());
@@ -798,9 +924,8 @@ void IRC_Protocol::handleKICK(const IRCMessage& msg, IRCUser* user) {
     std::string reason = (msg.params.size() > 2 ? msg.params[2] : "No reason given"); //cause
     std::string kickMsg = ":" + user->nickname + "!" + user->username + "@" + serverName + //broadcast
                           " KICK " + channelName + " " + targetNick + " :" + reason + "\r\n";
-    for (std::vector<IRCUser*>::iterator uit = ch->users.begin(); uit != ch->users.end(); ++uit) {
+    for (std::vector<IRCUser*>::iterator uit = ch->users.begin(); uit != ch->users.end(); ++uit)
         send((*uit)->clientSocket, kickMsg.c_str());
-    }
 
     ch->users.erase(std::remove(ch->users.begin(), ch->users.end(), targetUser), ch->users.end());
 
@@ -810,12 +935,14 @@ void IRC_Protocol::handleKICK(const IRCMessage& msg, IRCUser* user) {
     for (std::vector<std::string>::iterator sit = targetUser->channels.begin();
          sit != targetUser->channels.end(); ++sit)
     {
-        if (*sit == channelName) {
+        if (*sit == channelName)
+		{
             targetUser->channels.erase(sit);
             break;
         }
     }
-    if (ch->users.empty()) {
+    if (ch->users.empty())
+	{
         channels.erase(channelName);
         delete ch;
     }
