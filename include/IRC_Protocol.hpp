@@ -89,10 +89,7 @@ class IRC_Protocol : public SimpleTcpServer
 		void handleJOIN(const IRCMessage &msg, IRCUser *user);
 		void handlePART(const IRCMessage &msg, IRCUser *user);
 		void handleQUIT(const IRCMessage &msg, IRCUser *user);
-		void handleCAP(const IRCMessage &msg, IRCUser *user);
 		void handlePING(const IRCMessage &msg, IRCUser *user);
-		void handleLIST(const IRCMessage &msg, IRCUser *user);
-		void handleWHO(const IRCMessage &msg, IRCUser *user);
 		void handleMODE(const IRCMessage &msg, IRCUser *user);
 		void handleKICK(const IRCMessage &msg, IRCUser *user);
 		void handleINVITE(const IRCMessage &msg, IRCUser *user);

@@ -43,7 +43,7 @@ void SimpleTcpServer::start(const char *ip, const char* port, void *IRC, DataHan
     hints.ai_family = AF_INET;           // IPv4
     hints.ai_socktype = SOCK_STREAM;     // TCP
     hints.ai_protocol = proto->p_proto;  // getprotobyname's return value
-    hints.ai_flags = AI_PASSIVE;         // Yerel IP (wildcard)
+    hints.ai_flags = AI_PASSIVE;         // Local IP (wildcard)
 
 	char hostname[256];
 	if (gethostname(hostname, sizeof(hostname)) == 0)

@@ -31,6 +31,7 @@ IRCUser::IRCUser(int ClientSocket)
     nickname = "";
     username = "";
     realname = "";
+    isBot    = 0 ;
     registrationState = REG_STATE_INIT;
 }
 
@@ -66,10 +67,7 @@ IRC_Protocol::IRC_Protocol(int port, const std::string& password)
     commandHandlers["JOIN"] = &IRC_Protocol::handleJOIN;
     commandHandlers["PART"] = &IRC_Protocol::handlePART;
     commandHandlers["QUIT"] = &IRC_Protocol::handleQUIT;
-    commandHandlers["CAP"] = &IRC_Protocol::handleCAP;
     commandHandlers["PING"] = &IRC_Protocol::handlePING;
-    commandHandlers["LIST"] = &IRC_Protocol::handleLIST;
-    commandHandlers["WHO"]  = &IRC_Protocol::handleWHO;
     commandHandlers["MODE"] = &IRC_Protocol::handleMODE;
     commandHandlers["KICK"] = &IRC_Protocol::handleKICK;
     commandHandlers["INVITE"] = &IRC_Protocol::handleINVITE;
@@ -119,10 +117,10 @@ void IRC_Protocol::lifeloop(int clientSocket, const char* data, int length, void
     buf.append(data, length);
 
     size_t pos;
-    while ((pos = buf.find("\r\n")) != std::string::npos)
+    while ((pos = buf.find("\n")) != std::string::npos)
 	{
         std::string line = buf.substr(0, pos);
-        buf.erase(0, pos + 2); 
+        buf.erase(0, pos + 1); 
 
         IRCMessage msg = server->parser(line);
         std::cout << ">> " << msg.command;
