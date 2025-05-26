@@ -1,19 +1,5 @@
 #include "../include/IRC_Protocol.hpp"
-#include <cstdlib>
-#include <iostream>
-#include <sstream>
-#include <string>
-#include <algorithm>
-#include <cctype>
-#include <cstring>
 #include <ctime>
-#include <unistd.h>
-
-// Numeric reply sabitleri
-#define ERR_NEEDMOREPARAMS 461
-#define ERR_PASSWDMISMATCH 464
-#define ERR_NOTREGISTERED 451
-#define RPL_WELCOME 001
 
 // PASS
 void IRC_Protocol::handlePASS(const IRCMessage& msg, IRCUser* user) {
@@ -186,7 +172,7 @@ void IRC_Protocol::handlePRIVMSG(const IRCMessage& msg, IRCUser* user) {
     send(targetSock, resp.c_str());
 }
 
-
+//JOIN
 void IRC_Protocol::handleJOIN(const IRCMessage& msg, IRCUser* user) {
     if (msg.params.empty()) {
         send(user->clientSocket,
@@ -197,7 +183,6 @@ void IRC_Protocol::handleJOIN(const IRCMessage& msg, IRCUser* user) {
     std::string chName = msg.params[0];
     std::string key    = (msg.params.size() > 1 ? msg.params[1] : "");
 
-    // Kanal ismi geçerli mi? IRC'de genelde # ile başlar
     if (chName.empty() || chName[0] != '#') {
         send(user->clientSocket,
             (":" + serverName + " 403 " + chName + " :Invalid channel name\r\n").c_str());
@@ -214,7 +199,6 @@ void IRC_Protocol::handleJOIN(const IRCMessage& msg, IRCUser* user) {
     } else {
         ch = cit->second;
 
-        // +i kontrolü
         if (ch->inviteOnly) {
             bool invited = false;
             for (std::vector<IRCUser*>::iterator iit = ch->invitedUsers.begin(); iit != ch->invitedUsers.end(); ++iit) {
@@ -228,7 +212,6 @@ void IRC_Protocol::handleJOIN(const IRCMessage& msg, IRCUser* user) {
             }
         }
 
-        // +k kontrolü
         if (!ch->key.empty() && ch->key != key) {
             send(user->clientSocket,
                 (":" + serverName + " 475 " + user->nickname + " " + chName +
@@ -236,7 +219,6 @@ void IRC_Protocol::handleJOIN(const IRCMessage& msg, IRCUser* user) {
             return;
         }
 
-        // +l kontrolü
         if (ch->limit > 0 && (int)ch->users.size() >= ch->limit) {
             send(user->clientSocket,
                 (":" + serverName + " 471 " + user->nickname + " " + chName +
@@ -245,7 +227,6 @@ void IRC_Protocol::handleJOIN(const IRCMessage& msg, IRCUser* user) {
         }
     }
 
-    // Kullanıcıyı ekle (henüz eklenmemişse)
     std::vector<IRCUser*>::iterator uit;
     bool already = false;
     for (uit = ch->users.begin(); uit != ch->users.end(); ++uit) {
@@ -255,7 +236,6 @@ void IRC_Protocol::handleJOIN(const IRCMessage& msg, IRCUser* user) {
         ch->users.push_back(user);
         user->channels.push_back(chName);
 
-        // BOT varsa yeni gelen kullanıcıya özelden mesaj atsın
         for (std::vector<IRCUser*>::iterator bit = ch->users.begin(); bit != ch->users.end(); ++bit) {
             IRCUser* possibleBot = *bit;
             if (possibleBot->username == "bot") {
@@ -268,21 +248,18 @@ void IRC_Protocol::handleJOIN(const IRCMessage& msg, IRCUser* user) {
         }
     }
 
-    // JOIN bildirimi tüm üyelere
     std::string joinMsg = ":" + user->nickname + "!" + user->username + "@" +
                           serverName + " JOIN " + chName + "\r\n";
     for (uit = ch->users.begin(); uit != ch->users.end(); ++uit) {
         send((*uit)->clientSocket, joinMsg.c_str());
     }
 
-    // Eğer kanal yeni oluşturulduysa, kullanıcıya +o verildiğini bildir
     if (isNewChannel) {
         std::string modeMsg = ":" + serverName + " MODE " + chName +
                               " +o " + user->nickname + "\r\n";
         send(user->clientSocket, modeMsg.c_str());
     }
 
-    // NAMES yanıtı
     std::string namesList = ":" + serverName + " 353 " + user->nickname +
                             " = " + chName + " :";
     for (uit = ch->users.begin(); uit != ch->users.end(); ++uit) {
@@ -291,7 +268,6 @@ void IRC_Protocol::handleJOIN(const IRCMessage& msg, IRCUser* user) {
     namesList += "\r\n";
     send(user->clientSocket, namesList.c_str());
 
-    // End of NAMES
     std::string endNames = ":" + serverName + " 366 " + user->nickname +
                            " " + chName + " :End of /NAMES list\r\n";
     send(user->clientSocket, endNames.c_str());
@@ -497,17 +473,14 @@ void IRC_Protocol::handleTOPIC(const IRCMessage& msg, IRCUser* user) {
     }
     IRCChannel* ch = cit->second;
 
-    // *** Burada iteratörü tanımlıyoruz ***
     std::vector<IRCUser*>::iterator uit;
 
     if (msg.params.size() == 1) {
-        // Sadece konu gösterme
         send(user->clientSocket,
             (":" + serverName + " 332 " + user->nickname + " " + chName +
              " :" + ch->topic + "\r\n").c_str());
     }
     else {
-        // Değiştirme izni kontrolü (+t modu ve operatörlük)
         bool isOp = false;
         std::vector<IRCUser*>::iterator oit;
         for (oit = ch->operators.begin(); oit != ch->operators.end(); ++oit) {
@@ -520,12 +493,10 @@ void IRC_Protocol::handleTOPIC(const IRCMessage& msg, IRCUser* user) {
             return;
         }
 
-        // Konuyu güncelle
         ch->topic = msg.params[1];
         std::string tmsg = ":" + user->nickname + "!" + user->username + "@" +
                            serverName + " TOPIC " + chName + " :" + ch->topic + "\r\n";
 
-        // Tüm üyelere bildir
         for (uit = ch->users.begin(); uit != ch->users.end(); ++uit) {
             send((*uit)->clientSocket, tmsg.c_str());
         }
@@ -649,7 +620,6 @@ void IRC_Protocol::handleMODE(const IRCMessage& msg, IRCUser* user) {
         send(ch->users[i]->clientSocket, reply.c_str());
     }
 }
-
 
 // INVITE
 void IRC_Protocol::handleINVITE(const IRCMessage& msg, IRCUser* user) {
@@ -784,7 +754,6 @@ void IRC_Protocol::handlePING(const IRCMessage& msg, IRCUser* user) {
 
 // KICK
 void IRC_Protocol::handleKICK(const IRCMessage& msg, IRCUser* user) {
-    // 1) Parametre sayısı
     if (msg.params.size() < 2) {
         send(user->clientSocket,
             (":" + serverName + " 461 KICK :Not enough parameters\r\n").c_str());
@@ -793,7 +762,6 @@ void IRC_Protocol::handleKICK(const IRCMessage& msg, IRCUser* user) {
     const std::string& channelName = msg.params[0];
     const std::string& targetNick  = msg.params[1];
 
-    // 2) Kanal var mı?
     std::map<std::string, IRCChannel*>::iterator cit = channels.find(channelName);
     if (cit == channels.end()) {
         send(user->clientSocket,
@@ -802,7 +770,6 @@ void IRC_Protocol::handleKICK(const IRCMessage& msg, IRCUser* user) {
     }
     IRCChannel* ch = cit->second;
 
-    // 3) Atma yetkisi (operator) kontrolü
     bool isOp = false;
     for (std::vector<IRCUser*>::iterator oit = ch->operators.begin(); oit != ch->operators.end(); ++oit) {
         if (*oit == user) { isOp = true; break; }
@@ -814,7 +781,6 @@ void IRC_Protocol::handleKICK(const IRCMessage& msg, IRCUser* user) {
         return;
     }
 
-    // 4) Hedef kullanıcıyı bul
     IRCUser* targetUser = NULL;
     for (std::vector<IRCUser*>::iterator uit = ch->users.begin(); uit != ch->users.end(); ++uit) {
         if ((*uit)->nickname == targetNick) {
@@ -829,24 +795,18 @@ void IRC_Protocol::handleKICK(const IRCMessage& msg, IRCUser* user) {
         return;
     }
 
-    // 5) Sebep metni
-    std::string reason = (msg.params.size() > 2 ? msg.params[2] : "No reason given");
-
-    // 6) KICK mesajı (broadcast)
-    std::string kickMsg = ":" + user->nickname + "!" + user->username + "@" + serverName +
+    std::string reason = (msg.params.size() > 2 ? msg.params[2] : "No reason given"); //cause
+    std::string kickMsg = ":" + user->nickname + "!" + user->username + "@" + serverName + //broadcast
                           " KICK " + channelName + " " + targetNick + " :" + reason + "\r\n";
     for (std::vector<IRCUser*>::iterator uit = ch->users.begin(); uit != ch->users.end(); ++uit) {
         send((*uit)->clientSocket, kickMsg.c_str());
     }
 
-    // 7) Kullanıcı listesinden çıkar
     ch->users.erase(std::remove(ch->users.begin(), ch->users.end(), targetUser), ch->users.end());
 
-    // 8) Eğer sahibi operatörse, operatör listesinden de çıkar
     ch->operators.erase(std::remove(ch->operators.begin(), ch->operators.end(), targetUser),
                         ch->operators.end());
 
-    // 9) Kullanıcının kanal listesinden çıkar
     for (std::vector<std::string>::iterator sit = targetUser->channels.begin();
          sit != targetUser->channels.end(); ++sit)
     {
@@ -855,8 +815,6 @@ void IRC_Protocol::handleKICK(const IRCMessage& msg, IRCUser* user) {
             break;
         }
     }
-
-    // 10) Kanal boşaldıysa tamamen sil
     if (ch->users.empty()) {
         channels.erase(channelName);
         delete ch;

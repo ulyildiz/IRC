@@ -16,8 +16,8 @@ class SimpleTcpServer {
 		int setNonBlocking(int fd);
 		
 	protected:
-		struct pollfd fds[MAX_CLIENTS + 1]; // Poll için file descriptor array
-		nfds_t	nfds; // Aktif file descriptor sayısı
+		struct pollfd fds[MAX_CLIENTS + 1];
+		nfds_t	nfds;
 		
 		DataHandler dataHandler;
 		void* handlerUserData;

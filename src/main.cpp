@@ -1,17 +1,4 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   main.cpp                                           :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: ysarac <ysarac@student.42kocaeli.com>	    +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/02/28 15:44:47 by ysarac            #+#    #+#             */
-/*   Updated: 2025/03/04 01:38:28 by ysarac           ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "../include/IRC_Protocol.hpp"
-#include <iostream>
 #include <cstdlib>
 
 void	input_check(char *port, char *password)

@@ -8,8 +8,7 @@
 IRCMessage IRC_Protocol::parser(const std::string& rawData) {
     IRCMessage msg;
     std::string data = rawData;
-
-    // C++98'de std::string::back() olmadığından, doğrudan erişim yapıyoruz
+    
     while (!data.empty() && (data[data.size() - 1] == '\n' || data[data.size() - 1] == '\r')) {
         data.erase(data.size() - 1);
     }

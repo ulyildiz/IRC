@@ -2,16 +2,12 @@
 #define IRC_PROTOCOL_HPP
 
 #include "../lib/SimpleTCPServerListener/SimpleTcpServerListener.hpp"
-#include <string>
 #include <vector>
 #include <map>
-#include <cstdlib>
 #include <iostream>
 #include <sstream>
 #include <algorithm>
-#include <cctype>
-#include <cstring>
-#include <ctime>
+
 
 struct IRCMessage {
     std::string prefix;
@@ -27,30 +23,34 @@ struct IRCUser {
     int clientSocket;
     std::vector<std::string> channels; 
     int registrationState;
-    // (isteğe bağlı) server-wide operatörlük flag’i
     bool globalOperator;
     IRCUser(int ClientSocket);
     ~IRCUser();
 };
 
-// Kayıt durumu sabitleri
+// Registration Statement Flags
 #define REG_STATE_INIT 0
 #define REG_STATE_PASS 1
 #define REG_STATE_NICK 2
 #define REG_STATE_USER 3
 
+// Numeric replies constant
+#define ERR_NEEDMOREPARAMS 461
+#define ERR_PASSWDMISMATCH 464
+#define ERR_NOTREGISTERED 451
+#define RPL_WELCOME 001
+
 struct IRCChannel {
-    std::string name;        // Kanal adı, örn: "#chat"
-    std::string topic;       // Kanal konusu
-    // MODE komutuyla değişecek alt-modlar:
+    std::string name;        // Channel Name, for ex: "#chat"
+    std::string topic;       // Channel Topic
+    
     bool inviteOnly;         // +i
     bool topicOnlyOps;       // +t
-    std::string key;         // +k (şifre)
-    int limit;               // +l (üye limiti)
-    // Üyeler ve operatörler:
+    std::string key;         // +k (password)
+    int limit;               // +l (user limit)
     std::vector<IRCUser*> users;
-    std::vector<IRCUser*> operators;     // +o ile atanmış operatörler
-    std::vector<IRCUser*> invitedUsers;  // +i modunda davet edilenler
+    std::vector<IRCUser*> operators;     // Operator users
+    std::vector<IRCUser*> invitedUsers;  // Invited users
     IRCChannel(std::string chName, IRCUser* user);
 };
 
@@ -78,7 +78,7 @@ private:
     std::map<std::string, void(IRC_Protocol::*)(const IRCMessage&, IRCUser*)> commandHandlers;
     void handler(const IRCMessage &msg, int clientSocket);
 
-    // IRC komutları
+    // IRC Commands
     void handlePASS(const IRCMessage &msg, IRCUser *user);
     void handleNICK(const IRCMessage &msg, IRCUser *user);
     void handleUSER(const IRCMessage &msg, IRCUser *user);

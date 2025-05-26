@@ -9,7 +9,6 @@
 #include <netinet/in.h>
 #include <signal.h>
 #include <sys/stat.h>
-#include <poll.h>
 #include <errno.h>
 
 
@@ -43,10 +42,10 @@ void SimpleTcpServer::start(const char *ip, const char* port, void *IRC, DataHan
         throw std::runtime_error("getprotobyname() failed: " + std::string(std::strerror(errno)));
 
     std::memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;         // IPv4
-    hints.ai_socktype = SOCK_STREAM;   // TCP
-    hints.ai_protocol = proto->p_proto;  // getprotobyname'dan aldığımız protokol
-    hints.ai_flags = AI_PASSIVE;       // Yerel IP (wildcard)
+    hints.ai_family = AF_INET;           // IPv4
+    hints.ai_socktype = SOCK_STREAM;     // TCP
+    hints.ai_protocol = proto->p_proto;  // getprotobyname's return value
+    hints.ai_flags = AI_PASSIVE;         // Yerel IP (wildcard)
 
 	char hostname[256];
 	if (gethostname(hostname, sizeof(hostname)) == 0) {

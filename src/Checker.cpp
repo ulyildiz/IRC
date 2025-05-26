@@ -6,7 +6,6 @@ void IRC_Protocol::updateUserIfIncomplete(int clientSocket, const std::string& n
     if (it != connectedUsers.end()) {
         IRCUser* user = it->second;
         
-        // Nickname, username ve realname boş değilse, bunları güncelle
         bool updated = false;
         
         if (user->nickname.empty() && !nickname.empty()) {
@@ -22,7 +21,6 @@ void IRC_Protocol::updateUserIfIncomplete(int clientSocket, const std::string& n
             updated = true;
         }
 
-        // Eğer kullanıcı tam anlamıyla tanımlandıysa, hoş geldiniz mesajı gönder
         if (user->nickname != "" && user->username != "" && user->realname != "") {
             if (updated) {
                 std::string welcomeMessage = ":" + serverName + " :Welcome to the IRC server!";
