@@ -18,7 +18,7 @@ void IRC_Protocol::handlePASS(const IRCMessage& msg, IRCUser* user)
     }
     if (msg.params[0] == _password)
 	{
-        user->registrationState = REG_STATE_PASS;
+        user->registrationState += REG_STATE_PASS;
         send(user->clientSocket,
             (":" + serverName + " NOTICE " +
             (user->nickname.empty() ? "*" : user->nickname) +
@@ -58,10 +58,13 @@ void IRC_Protocol::handleNICK(const IRCMessage& msg, IRCUser* user) {
         }
     }
     
-	user->nickname = newNick;
-    user->registrationState = REG_STATE_NICK;
-    send(user->clientSocket,
-        (":" + serverName + " NICK " + newNick + "\r\n").c_str());
+    user->registrationState += REG_STATE_NICK;
+    for (nfds_t i = 1; i < nfds; i++)
+    {
+        send(fds[i].fd, (":" + user->nickname + "!" + user->username + "@" + serverName +
+            " NICK :" + newNick + "\r\n").c_str());
+    }    
+    user->nickname = newNick;
 }
 
 // USER
@@ -82,7 +85,7 @@ void IRC_Protocol::handleUSER(const IRCMessage& msg, IRCUser* user)
     
 	user->username = msg.params[0];
     user->realname = msg.params[3];
-    user->registrationState = REG_STATE_USER;
+    user->registrationState += REG_STATE_USER;
     send(user->clientSocket,
         (":" + serverName + " 001 " + user->nickname +
          " :Welcome to the IRC Network, " + user->nickname + "!\r\n").c_str());
@@ -873,4 +876,37 @@ void IRC_Protocol::handleKICK(const IRCMessage& msg, IRCUser* user)
         channels.erase(channelName);
         delete ch;
     }
+}
+
+// WHO
+void IRC_Protocol::handleWHO(const IRCMessage& msg, IRCUser* user)
+{
+    if (msg.params.empty())
+	{
+        send(user->clientSocket,
+            (":" + serverName + " 461 WHO :Not enough parameters\r\n").c_str());
+        return;
+    }
+
+	std::string chName = msg.params[0];
+    std::map<std::string, IRCChannel*>::iterator cit = channels.find(chName);
+    if (cit == channels.end())
+	{
+        send(user->clientSocket,
+            (":" + serverName + " 403 " + chName + " :No such channel\r\n").c_str());
+        return;
+    }
+    IRCChannel* ch = cit->second;
+    
+	std::vector<IRCUser*>::iterator uit;
+    for (uit = ch->users.begin(); uit != ch->users.end(); ++uit)
+	{
+        send(user->clientSocket,
+            (":" + serverName + " 352 " + user->nickname + " " + chName +
+             " host " + serverName + " " + (*uit)->nickname +
+             " H :0 " + (*uit)->realname + "\r\n").c_str());
+    }
+    send(user->clientSocket,
+        (":" + serverName + " 315 " + user->nickname + " " + chName +
+         " :End of WHO list\r\n").c_str());
 }

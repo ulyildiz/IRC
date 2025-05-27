@@ -63,6 +63,7 @@ IRC_Protocol::IRC_Protocol(int port, const std::string& password)
 	commandHandlers["PASS"] = &IRC_Protocol::handlePASS;
     commandHandlers["NICK"] = &IRC_Protocol::handleNICK;
     commandHandlers["USER"] = &IRC_Protocol::handleUSER;
+    commandHandlers["WHO"] = &IRC_Protocol::handleWHO;
     commandHandlers["PRIVMSG"] = &IRC_Protocol::handlePRIVMSG;
     commandHandlers["JOIN"] = &IRC_Protocol::handleJOIN;
     commandHandlers["PART"] = &IRC_Protocol::handlePART;
@@ -150,7 +151,7 @@ void IRC_Protocol::handler(const IRCMessage& msg, int clientSocket)
     }
     IRCUser* user = uit->second;
 
-    if (user->registrationState < REG_STATE_USER)
+    if (user->registrationState < (REG_STATE_PASS + REG_STATE_NICK + REG_STATE_USER))
 	{
         if (msg.command != "PASS" && msg.command != "NICK" && msg.command != "USER")
 		{

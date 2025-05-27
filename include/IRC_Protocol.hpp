@@ -9,10 +9,11 @@
 # include <algorithm>
 
 // Registration Statement Flags
-# define REG_STATE_INIT 0
-# define REG_STATE_PASS 1
-# define REG_STATE_NICK 2
-# define REG_STATE_USER 3
+# define REG_STATE_INIT 	0
+# define REG_STATE_PASS 	1
+# define REG_STATE_NICK 	2
+# define REG_STATE_USER 	3
+# define REG_STATE_COMPLETE 4
 
 // Numeric replies constant
 # define ERR_NEEDMOREPARAMS 461
@@ -85,6 +86,7 @@ class IRC_Protocol : public SimpleTcpServer
 		void handlePASS(const IRCMessage &msg, IRCUser *user);
 		void handleNICK(const IRCMessage &msg, IRCUser *user);
 		void handleUSER(const IRCMessage &msg, IRCUser *user);
+		void handleWHO(const IRCMessage &msg, IRCUser *user);
 		void handlePRIVMSG(const IRCMessage &msg, IRCUser *user);
 		void handleJOIN(const IRCMessage &msg, IRCUser *user);
 		void handlePART(const IRCMessage &msg, IRCUser *user);

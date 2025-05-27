@@ -45,17 +45,3 @@ IRCMessage IRC_Protocol::parser(const std::string& rawData)
 
     return msg;
 }
-
-std::vector<IRCMessage> IRC_Protocol::parseMultiple(const std::string& rawData)
-{
-    std::vector<IRCMessage> messages;
-    std::istringstream stream(rawData);
-    std::string line;
-
-	while (std::getline(stream, line))
-	{
-        if (!line.empty())
-            messages.push_back(parser(line));
-    }
-    return messages;
-}
