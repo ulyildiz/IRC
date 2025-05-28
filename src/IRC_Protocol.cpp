@@ -124,6 +124,7 @@ void IRC_Protocol::lifeloop(int clientSocket, const char* data, int length, void
         buf.erase(0, pos + 1); 
 
         IRCMessage msg = server->parser(line);
+        std::cout << ">> " << msg.prefix;
         std::cout << ">> " << msg.command;
     
 		for (size_t i = 0; i < msg.params.size(); ++i)

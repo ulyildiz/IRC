@@ -69,7 +69,7 @@ class IRC_Protocol : public SimpleTcpServer
 
 		// Parser
 		IRCMessage parser(const std::string &rawData);
-		std::vector<IRCMessage> parseMultiple(const std::string &rawData);
+		std::vector<std::string> split(const std::string &s, char delimiter);
 		static void lifeloop(int clientSocket, const char *data, int length, void *userData);
 
     	// Checker

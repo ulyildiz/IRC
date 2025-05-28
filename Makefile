@@ -9,12 +9,14 @@ OBJECTS := $(patsubst $(SRCDIR)/%.cpp,$(OBJDIR)/%.o,$(SOURCES))
 
 LIBDIR = lib/SimpleTCPServerListener
 STATIC_LIB = $(LIBDIR)/libSimpleTcpServerListener.a
+LIB_SRCDIR = $(LIBDIR)
+LIB_SOURCES := $(wildcard $(LIB_SRCDIR)/*.cpp)
 
 TARGET = ircserv
 
 all: $(TARGET)
 
-$(TARGET): $(OBJECTS) $(STATIC_LIB)
+$(TARGET): $(STATIC_LIB) $(OBJECTS)
 	@echo "Linking $@..."
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJECTS) -L$(LIBDIR) -lSimpleTcpServerListener
 
@@ -23,7 +25,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 	@echo "Compiling $<..."
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-$(STATIC_LIB):	
+$(STATIC_LIB): $(LIB_SOURCES)
 	$(MAKE) -C $(LIBDIR)
 
 clean:

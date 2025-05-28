@@ -5,43 +5,48 @@
 #include <string>
 #include <map>
 
-IRCMessage IRC_Protocol::parser(const std::string& rawData)
+std::vector<std::string> IRC_Protocol::split(const std::string &s, char delimiter)
 {
-    IRCMessage msg;
-    std::string data = rawData;
-    
-    while (!data.empty() && (data[data.size() - 1] == '\n' || data[data.size() - 1] == '\r'))
-        data.erase(data.size() - 1);
-
-    std::istringstream iss(data);
+    std::vector<std::string> tokens;
     std::string token;
+    std::istringstream tokenStream(s);
+    while (std::getline(tokenStream, token, delimiter))
+        tokens.push_back(token);
+    return tokens;
+}
 
-    if (!data.empty() && data[0] == ':')
-	{
-        iss >> msg.prefix;
-        msg.prefix.erase(0, 1);
-    }
 
-    if (iss >> msg.command)
-        std::transform(msg.command.begin(), msg.command.end(), msg.command.begin(), ::toupper);
+IRCMessage IRC_Protocol::parser(const std::string &rawData) {
+	IRCMessage msg;
+	std::string line = rawData;
+	std::string token;
 
-    std::string param;
-    while (iss >> param)
-	{
-        if (param[0] == ':')
-		{
-            std::string rest;
-            std::getline(iss, rest);
-            msg.params.push_back(param.substr(1) + rest);
-            break;
-        }
-        
-		std::istringstream paramStream(param);
-        std::string splitParam;
-        
-		while (std::getline(paramStream, splitParam, ','))
-            msg.params.push_back(splitParam);
-    }
+	std::istringstream iss(line);
 
-    return msg;
+	if (!line.empty() && line[0] == ':') {
+		iss >> token;
+		msg.prefix = token.substr(1); 
+	}
+
+
+	if (!(iss >> msg.command)) {
+		return msg;
+	}
+		std::transform(msg.command.begin(), msg.command.end(), msg.command.begin(), ::toupper);
+
+	while (iss >> token) {
+		if (token[0] == ':') {
+	
+			std::string trailing;
+			std::getline(iss, trailing);
+			if (!trailing.empty() && trailing[0] == ' ')
+				trailing.erase(0, 1); 
+			msg.params.push_back(token.substr(1) + (trailing.empty() ? "" : " " + trailing));
+			break;
+		} else {
+			msg.params.push_back(token);
+		}
+	}
+
+	return msg;
 }
